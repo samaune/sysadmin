@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [string]$Path="C:\",
+    [string]$Path="C:\"
 )
 
 Get-ChildItem $Path -Force |
