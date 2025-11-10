@@ -1,6 +1,6 @@
 param(
-    [Parameter(Mandatory=$true, Position=0)]
-    [string]$Path="C:\"
+    [Parameter(Mandatory=$false, Position=0)]
+    [string]$Path="C:\inetpub\wwwroot"
 )
 
 Get-ChildItem $Path -Force |

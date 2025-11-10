@@ -7,14 +7,14 @@
 #>
 
 param(
-    [Parameter(Mandatory=$true, Position=0)]
-    [string]$DomainName,
+  [Parameter(Mandatory=$true, Position=0)]
+  [string]$DomainName,
   
-  [Parameter(Mandatory=$false)]
-    [string]$Password,
+  # [Parameter(Mandatory=$false)]
+  # [string]$Password = "",
 
-    [Parameter(Mandatory=$false, HelpMessage="Force import even if certificate exists or not expired")]
-    [switch]$Force
+  [Parameter(Mandatory=$false, HelpMessage="Force import even if certificate exists or not expired")]
+  [switch]$Force
 )
 
 if(!$DomainName) {
@@ -24,40 +24,40 @@ if(!$DomainName) {
 
 $port=443;
 $pfxPath = "uploads\$DomainName.pfx"
-$PfxUrl="https://developer.singha.app/downloads/certs/pfx/$domainName.pfx"; 
-# Read-Host "Enter password" -AsSecureString | ConvertFrom-SecureString
-# "secret" | ConvertTo-SecureString
-$pfxPwd = ConvertTo-SecureString $Password -AsPlainText -Force
-if (!$Password) {
-  $pfxPwd = Read-Host -Prompt "Enter PFX password" -AsSecureString
-}
 
+# [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
 $tcp=New-Object System.Net.Sockets.TcpClient; 
-$tcp.Connect($DomainName,$port);
-$ssl=New-Object System.Net.Security.SslStream($tcp.GetStream(),$false,({$true}));
+$tcp.Connect($DomainName, $port);
+$ssl=New-Object System.Net.Security.SslStream($tcp.GetStream(), $false, ({$true}));
 $ssl.AuthenticateAsClient($DomainName);
 $resCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $ssl.RemoteCertificate;
 $tcp.Close(); $ssl.Close();
-
-$certExpiryDate = $resCert.NotAfter; 
 $remainingDay = ([math]::Ceiling(($resCert.NotAfter - (Get-Date)).TotalDays));
+$remainingDay = 1
 
 if (($remainingDay -eq 0) -or ($Force)) {
-  # Download new PFX
-  try {
-    if (Test-Path $pfxPath) {
-      #Remove-Item $pfxPath -Force
-      $DateStr = Get-Date -Format "yyyyMMdd"
-      $pfxNewPath = $pfxPath -replace "\.pfx$", "_$(Get-Date -Format "yyyyMMdd").pfx";
-      Move-Item -Path $pfxPath -Destination  $pfxNewPath -Force
-      Write-Host "Moved $pfxPath"
-    }
-    Invoke-WebRequest -Uri $PfxUrl -OutFile $pfxPath -UseBasicParsing
-    Write-Host "Downloaded PFX to $pfxPath"    
-  } catch {
-    Write-Error "Failed to download PFX: $_"
-    exit 1
-  }
+  ## Download new PFX
+  # try {
+  #   if (Test-Path $pfxPath) {
+  #     $pfxNewPath = $pfxPath -replace "\.pfx$", "_$(Get-Date -Format "yyyyMMdd").pfx";
+  #     Move-Item -Path $pfxPath -Destination  $pfxNewPath -Force
+  #     Write-Host "Moved $pfxPath"
+  #   }
+  #   $PfxUrl="https://developer.singha.app/downloads/certs/pfx/$domainName.pfx"; 
+  #   Invoke-WebRequest -Uri $PfxUrl -OutFile $pfxPath -UseBasicParsing
+  #   Write-Host "Downloaded PFX to $pfxPath"    
+  # } catch {
+  #   Write-Error "Failed to download PFX: $_"
+  #   exit 1
+  # }
+
+  $pfxPwd = "secret" `
+  | ConvertTo-SecureString
+  # Read-Host "Enter password" -AsSecureString | ConvertFrom-SecureString
+  # $pfxPwd = ConvertTo-SecureString $Password -AsPlainText -Force
+  # if (!$Password) {
+  #   $pfxPwd = Read-Host -Prompt "Enter PFX password" -AsSecureString
+  # }
 
   # Write-Host "Certificate expires today!";
   $cert = Get-PfxCertificate -FilePath $pfxPath -Password $pfxPwd
