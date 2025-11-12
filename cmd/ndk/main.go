@@ -1,20 +1,10 @@
 package main
 
-// "encoding/json"
-// "log"
-// "net/http"
-// "os"
-// "os/exec"
-// "path/filepath"
-
-// "fmt"
-// "ndk/internal/certs"
-//import "ndk/internal/certs"
 import (
-	//"ndk/internal/kube"
 	"log"
 	"ndk/internal/config"
 	"ndk/internal/server"
+	//"ndk/internal/kube"
 )
 
 func main() {

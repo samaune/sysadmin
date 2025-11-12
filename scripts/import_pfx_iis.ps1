@@ -25,14 +25,13 @@ if(!$DomainName) {
 $port=443;
 $pfxPath = "uploads\$DomainName.pfx"
 
-# [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-$tcp=New-Object System.Net.Sockets.TcpClient; 
-$tcp.Connect($DomainName, $port);
-$ssl=New-Object System.Net.Security.SslStream($tcp.GetStream(), $false, ({$true}));
-$ssl.AuthenticateAsClient($DomainName);
-$resCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $ssl.RemoteCertificate;
-$tcp.Close(); $ssl.Close();
-$remainingDay = ([math]::Ceiling(($resCert.NotAfter - (Get-Date)).TotalDays));
+# $tcp=New-Object System.Net.Sockets.TcpClient; 
+# $tcp.Connect($DomainName, $port);
+# $ssl=New-Object System.Net.Security.SslStream($tcp.GetStream(), $false, ({$true}));
+# $ssl.AuthenticateAsClient($DomainName);
+# $resCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $ssl.RemoteCertificate;
+# $tcp.Close(); $ssl.Close();
+# $remainingDay = ([math]::Ceiling(($resCert.NotAfter - (Get-Date)).TotalDays));
 $remainingDay = 1
 
 if (($remainingDay -eq 0) -or ($Force)) {
@@ -51,10 +50,9 @@ if (($remainingDay -eq 0) -or ($Force)) {
   #   exit 1
   # }
 
-  $pfxPwd = "secret" `
-  | ConvertTo-SecureString
+  $Password = ""
   # Read-Host "Enter password" -AsSecureString | ConvertFrom-SecureString
-  # $pfxPwd = ConvertTo-SecureString $Password -AsPlainText -Force
+  $pfxPwd = ConvertTo-SecureString $Password -AsPlainText -Force
   # if (!$Password) {
   #   $pfxPwd = Read-Host -Prompt "Enter PFX password" -AsSecureString
   # }
