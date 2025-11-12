@@ -1,8 +1,9 @@
-package handlers
+package kube
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,14 +11,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 func Watcher() {
-	// Build kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err)
+		// fallback to kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+		if err != nil {
+			log.Fatalf("Failed to load kubeconfig: %v", err)
+		}
 	}
 
 	// Create dynamic client
@@ -50,9 +55,6 @@ func Watcher() {
 
 	// Listen for events
 	for event := range watcher.ResultChan() {
-		// obj := event.Object
-		// unstructuredObj := obj.(map[string]interface{})
-		// Safely cast to *unstructured.Unstructured
 		unstructuredObj, ok := event.Object.(*unstructured.Unstructured)
 		if !ok {
 			fmt.Println("Skipping unexpected object type")
@@ -67,8 +69,8 @@ func Watcher() {
 		spec, found, _ := unstructured.NestedMap(unstructuredObj.Object, "spec")
 		var cn string
 		if found {
-			if val, ok := spec["commonName"].(string); ok {
-				cn = val
+			if val, ok := spec["dnsNames"].([]string); ok {
+				cn = val[0]
 			}
 		}
 

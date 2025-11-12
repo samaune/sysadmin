@@ -11,11 +11,21 @@ package main
 // "ndk/internal/certs"
 //import "ndk/internal/certs"
 import (
-	//"ndk/internal/certs"
-	"ndk/internal/handlers"
+	//"ndk/internal/kube"
+	"log"
+	"ndk/internal/config"
+	"ndk/internal/server"
 )
 
 func main() {
-	//certs.GetCert("commonName")
-	handlers.Watcher()
+	cfg := config.Load()
+	srv := server.New(cfg)
+
+	log.Println("🚀 Starting server on", cfg.ServerPort)
+	if err := srv.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	//kube.GetCert("dagu.nagaworld.com")
+	//handlers.Watcher()
 }
