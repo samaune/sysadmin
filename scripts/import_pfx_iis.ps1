@@ -74,7 +74,7 @@ if (($remainingDay -eq 0) -or ($Force)) {
   $binding = "${DomainName}:${port}"
   Write-Host "Updating binding $binding..."
   netsh http delete sslcert hostnameport=$binding
-  netsh http add sslcert hostnameport=$binding certhash=$thumbprint certstorename=My appid='{00112233-4455-6677-8899-AABBCCDDEEFF}'
+  netsh http add sslcert hostnameport=$binding certhash=$thumbprint certstorename=My appid='{98525227-7F70-4B89-908D-BE5F94026C65}'
 
   # Cleanup - Remove expired certificate
   Get-ChildItem Cert:\LocalMachine\My `
