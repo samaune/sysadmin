@@ -7,6 +7,7 @@ require (
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 	software.sslmate.com/src/go-pkcs12 v0.6.0
+	github.com/joho/godotenv v1.5.1
 )
 
 require (

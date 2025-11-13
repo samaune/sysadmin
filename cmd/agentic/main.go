@@ -7,17 +7,18 @@ import (
 	// "net/http"
 
 	// "software.sslmate.com/src/go-pkcs12"
-
+	"ndk/internal/config"
+	"ndk/internal/exec"
 	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
 func main() {
-	hostname := "example.com"
-	pfxPath := fmt.Sprintf("uploads/%s.pfx", hostname)
-	pfxPwd := ""
+	cfg := config.Load()
+	hostname := cfg.DnsName
+	pfxPath := fmt.Sprintf("uploads\\%s.pfx", hostname)
+	pfxPwd := cfg.PfxPassword
 	port := 443
 
 	// Import the PFX certificate into the "My" store under LocalMachine
@@ -25,7 +26,7 @@ func main() {
 
 	// Bind the cert to IIS using netsh
 	bindCmd := fmt.Sprintf(`netsh http add sslcert hostnameport=%s:%d certhash=%s appid="{00112233-4455-6677-8899-AABBCCDDEEFF}" certstorename=MY`, hostname, port, thumb)
-	out, err := runCmd("cmd", "/C", bindCmd)
+	out, err := exec.RunCmd("cmd", "/C", bindCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to bind cert to IIS: %v\nOutput: %s", err, out))
 	}
@@ -37,19 +38,19 @@ func ImportPfxCertificate(pfxPath string, pfxPwd string) string {
 	if IsExistsPfxCertificate(thumb) {
 		fmt.Println("Certificate %s already exists.", thumb)
 		psCmd := fmt.Sprintf(`Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq "%s" } | Remove-Item;`, thumb)
-		out, err := runPowerShell(psCmd)
+		out, err := exec.RunPwsh(psCmd)
 		if err != nil {
 			panic(fmt.Errorf("failed to delete PFX: %v\nOutput: %s", err, out))
 		}
 	} else {
 		// Import the PFX certificate into the "My" store under LocalMachine
 		psCmd := fmt.Sprintf(`
-		Import-Module Microsoft.PowerShell.Security;
 		$pfxPwd = ConvertTo-SecureString "%s" -AsPlainText -Force;
 		$pfx = Import-PfxCertificate -FilePath "%s" -CertStoreLocation Cert:\LocalMachine\My -Password $pfxPwd;
 		$pfx.Thumbprint
 		`, pfxPwd, pfxPath)
-		out, err := runPowerShell(psCmd)
+
+		out, err := exec.RunPwsh(psCmd)
 		if err != nil {
 			panic(fmt.Errorf("failed to import PFX: %v\nOutput: %s", err, out))
 		}
@@ -57,6 +58,7 @@ func ImportPfxCertificate(pfxPath string, pfxPwd string) string {
 		out = bytes.TrimSpace(out)
 		thumb = string(out)
 	}
+	fmt.Println("%s", thumb)
 	return thumb
 }
 
@@ -65,7 +67,7 @@ func IsExistsPfxCertificate(thumb string) bool {
 	$cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq "%s" };
 	if ($cert) { Write-Output "FOUND" } else { Write-Output "NOTFOUND" }
 	`, strings.ToUpper(thumb))
-	out, err := runPowerShell(psCmd)
+	out, err := exec.RunPwsh(psCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to get thumbprint: %v\nOutput: %s", err, out))
 	}
@@ -78,23 +80,10 @@ func GetThumbprint(pfxPath string, pfxPwd string) string {
 	$pfxPwd = ConvertTo-SecureString "%s" -AsPlainText -Force;
 	(Get-PfxCertificate "%s" -Password $pfxPwd).Thumbprint;
 	`, pfxPwd, pfxPath)
-	thumb, err := runPowerShell(getThumbCmd)
+	thumb, err := exec.RunPwsh(getThumbCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to get thumbprint: %v\nOutput: %s", err, thumb))
 	}
 	thumb = bytes.TrimSpace(thumb)
 	return string(thumb)
-}
-
-func runPowerShell(cmd string) ([]byte, error) {
-	return runCmd("C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-Command", cmd)
-}
-
-func runCmd(name string, args ...string) ([]byte, error) {
-	cmd := exec.Command(name, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	err := cmd.Run()
-	return out.Bytes(), err
 }
