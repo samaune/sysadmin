@@ -80,9 +80,22 @@ func runCmdElevatedCapture(execPath string, args ...string) ([]byte, error) {
 }
 
 // Example wrapper for running a PowerShell command elevated and getting its output
-func RunPwsh(command string) ([]byte, error) {
+func RunPwshAdmin(command string) ([]byte, error) {
 	// We will call pwsh.exe -Command "<command>"
 	// If you want Windows PowerShell 5.1, use "powershell" instead of pwsh path.
 	pwshPath := `C:\Program Files\PowerShell\7\pwsh.exe`
 	return runCmdElevatedCapture(pwshPath, "-NoProfile", "-Command", command)
+}
+
+func RunPwsh(cmd string) ([]byte, error) {
+	return runCmd("C:\\Program Files\\PowerShell\\7\\pwsh.exe", "-Command", cmd)
+}
+
+func runCmd(name string, args ...string) ([]byte, error) {
+	cmd := exec.Command(name, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+	return out.Bytes(), err
 }

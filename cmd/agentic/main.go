@@ -16,19 +16,19 @@ func main() {
 	hostname := cfg.DnsName
 	binding := fmt.Sprintf("%s:%d", hostname, port)
 
-	// Import the PFX certificate into the "My" store under LocalMachine
-	// pfxPath := fmt.Sprintf("%s\\uploads\\%s.pfx", cfg.PfxPath, hostname)
-	// pfxPwd := cfg.PfxPwd
-	// thumb := ImportPfxCertificate(pfxPath, pfxPwd)
+	pfxPath := fmt.Sprintf("%s\\uploads\\%s.pfx", cfg.PfxPath, hostname)
+	pfxPwd := cfg.PfxPwd
+	thumb := ImportPfxCertificate(pfxPath, pfxPwd)
 
+	psCmd := fmt.Sprintf(`netsh http update sslcert hostnameport="%s" certhash="%s" appid={%s} certstorename=MY`, binding,
+	 thumb, "4dc3e181-e14b-4a21-b022-59fc669b0914")
 	// thumb := "A8DAFB74120C2A9E790B0E8366A89854A1ADDB84"
 	// BindingIIS(binding, thumb)
-	out, _ := GetIISBindingAppId(binding)
-	fmt.Println(out)
+	fmt.Println(thumb)
 }
 
 func GetIISBindingAppId(binding string) (string, bool) {
-	psCmd := fmt.Sprintf(` netsh http show sslcert | Select-String "%s" -Context 0,8`, binding)
+	psCmd := fmt.Sprintf(`netsh http show sslcert | Select-String "%s" -Context 0,8`, binding)
 	out, err := exec.RunPwsh(psCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to get binding: %v\nOutput: %s", err, out))
@@ -43,26 +43,25 @@ func GetIISBindingAppId(binding string) (string, bool) {
 		return match[1], true
 	} else {
 		//fmt.Println("Application ID not found")
-		return "", false
+		return "4dc3e181-e14b-4a21-b022-59fc669b0914", false
 	}
 }
 
 func BindingIIS(binding string, thumb string) {
-	appId := "4dc3e181-e14b-4a21-b022-59fc669b0914"
+	appId, exists := GetIISBindingAppId(binding)
 
-	//psCmd := fmt.Sprintf(`netsh http add sslcert hostnameport=%s certhash=%s appid={%s} certstorename=MY`, binding, thumb, appId)
-	psCmd := fmt.Sprintf(`netsh http update sslcert hostnameport=%s certhash=%s appid={%s} certstorename=MY`, binding, thumb, appId)
-	// if IsExistsPfxCertificate(appId) {
-	// }
+	psCmd := fmt.Sprintf(`netsh http update sslcert hostnameport="%s" certhash="%s" appid={%s} certstorename=MY`, binding, thumb, appId)
+	if !exists {
+		psCmd = fmt.Sprintf(`netsh http add sslcert hostnameport="%s" certhash="%s" appid={%s} certstorename=MY`, binding, thumb, appId)
+	}
 	fmt.Println(psCmd)
-	out, err := exec.RunCmd(psCmd)
+	out, err := exec.RunPwsh(psCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to bind cert to IIS: %v\nOutput: %s", err, out))
 	}
-	out = bytes.TrimSpace(out)
 	fmt.Println("Certificate bound to IIS successfully.")
-	result := strings.TrimSpace(string(out))
-	fmt.Printf("Certificate IIS: %v", result)
+	// out = bytes.TrimSpace(out)
+	// result := strings.TrimSpace(string(out))
 }
 
 func ImportPfxCertificate(pfxPath string, pfxPwd string) string {
@@ -70,7 +69,7 @@ func ImportPfxCertificate(pfxPath string, pfxPwd string) string {
 	if IsExistsPfxCertificate(thumb) {
 		fmt.Printf("Certificate %s already exists.", thumb)
 		psCmd := fmt.Sprintf(`Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq "%s" } | Remove-Item;`, thumb)
-		out, err := exec.RunPwsh(psCmd)
+		out, err := exec.RunPwshAdmin(psCmd)
 		if err != nil {
 			panic(fmt.Errorf("failed to delete PFX: %v\nOutput: %s", err, out))
 		}
@@ -83,7 +82,7 @@ func ImportPfxCertificate(pfxPath string, pfxPwd string) string {
 	$pfx.Thumbprint
 	`, pfxPwd, pfxPath)
 
-	out, err := exec.RunPwsh(psCmd)
+	out, err := exec.RunPwshAdmin(psCmd)
 	if err != nil {
 		panic(fmt.Errorf("failed to import PFX: %v\nOutput: %s", err, out))
 	}
