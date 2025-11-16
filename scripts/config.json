@@ -1,7 +1,7 @@
 [  {
         "namespace": "staging",
         "dns_names": [
-            "staging-myportal.nagaworld.com"
+            "staging-myportal.example.com"
         ]
     }
 ]
