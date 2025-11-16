@@ -35,29 +35,22 @@ $pfxPath = "uploads\$DomainName.pfx"
 $remainingDay = 1
 
 if (($remainingDay -eq 0) -or ($Force)) {
-  ## Download new PFX
-  # try {
-  #   if (Test-Path $pfxPath) {
-  #     $pfxNewPath = $pfxPath -replace "\.pfx$", "_$(Get-Date -Format "yyyyMMdd").pfx";
-  #     Move-Item -Path $pfxPath -Destination  $pfxNewPath -Force
-  #     Write-Host "Moved $pfxPath"
-  #   }
-  #   $PfxUrl="https://developer.singha.app/downloads/certs/pfx/$domainName.pfx"; 
-  #   Invoke-WebRequest -Uri $PfxUrl -OutFile $pfxPath -UseBasicParsing
-  #   Write-Host "Downloaded PFX to $pfxPath"    
-  # } catch {
-  #   Write-Error "Failed to download PFX: $_"
-  #   exit 1
-  # }
-
-  $Password = ""
-  # Read-Host "Enter password" -AsSecureString | ConvertFrom-SecureString
-  $pfxPwd = ConvertTo-SecureString $Password -AsPlainText -Force
-  # if (!$Password) {
-  #   $pfxPwd = Read-Host -Prompt "Enter PFX password" -AsSecureString
-  # }
-
-  # Write-Host "Certificate expires today!";
+  # Download new PFX
+  try {
+    if (Test-Path $pfxPath) {
+      $pfxNewPath = $pfxPath -replace "\.pfx$", "_$(Get-Date -Format "yyyyMMdd").pfx";
+      Move-Item -Path $pfxPath -Destination  $pfxNewPath -Force
+      Write-Host "Moved $pfxPath"
+    }
+    $PfxUrl= $Env:PFX_URL + "/$domainName.pfx"; 
+    Invoke-WebRequest -Uri $PfxUrl -OutFile $pfxPath -UseBasicParsing -SkipCertificateCheck
+    Write-Host "Downloaded PFX to $pfxPath"    
+  } catch {
+    Write-Error "Failed to download PFX: $_"
+    exit 1
+  }
+  
+  $pfxPwd = $Env:PFX_PWD | ConvertTo-SecureString 
   $cert = Get-PfxCertificate -FilePath $pfxPath -Password $pfxPwd
   $existingCert = Get-ChildItem Cert:\LocalMachine\My ` | Where-Object { $_.Thumbprint -eq ($cert.Thumbprint) } `
   
@@ -73,7 +66,8 @@ if (($remainingDay -eq 0) -or ($Force)) {
   # Binding - IIS Binding update cert to IIS (Requied enabled DNI)
   $binding = "${DomainName}:${port}"
   Write-Host "Updating binding $binding..."
-  netsh http delete sslcert hostnameport=$binding
+  # netsh http delete sslcert hostnameport=$binding
+  netsh http update sslcert hostnameport=$binding certhash=$thumbprint certstorename=My appid='{98525227-7F70-4B89-908D-BE5F94026C65}'
   netsh http add sslcert hostnameport=$binding certhash=$thumbprint certstorename=My appid='{98525227-7F70-4B89-908D-BE5F94026C65}'
 
   # Cleanup - Remove expired certificate
